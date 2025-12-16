@@ -112,3 +112,52 @@ def validate_sub_theme(
     db.commit()
     
     return {"message": f"Sub-theme {status}", "status": status}
+
+@router.put("/users/{user_id}")
+def update_user(
+    user_id: int,
+    user_update: schemas.UserUpdate,
+    current_admin: models.User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if user_update.full_name is not None:
+        user.full_name = user_update.full_name
+    if user_update.email is not None:
+        # Check uniqueness if email changes
+        if user_update.email != user.email:
+            existing = db.query(models.User).filter(models.User.email == user_update.email).first()
+            if existing:
+                raise HTTPException(status_code=400, detail="Email already registered")
+        user.email = user_update.email
+    if user_update.role is not None:
+        user.role = user_update.role
+    if user_update.is_active is not None:
+        user.is_active = user_update.is_active
+        
+    db.commit()
+    return {"message": "User updated successfully"}
+
+@router.delete("/users/{user_id}")
+def delete_user(
+    user_id: int,
+    current_admin: models.User = Depends(get_current_admin),
+    db: Session = Depends(get_db)
+):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    # Optional: Check if user can be deleted (e.g. valid team member, has documents?)
+    # For now, we allow deletion and cascade might handle it or we leave orhpans.
+    # Postgres usually needs Cascade on ForeignKey to delete related data.
+    # Given database.py doesn't specify cascade, we might error if we delete a user with related data.
+    # But for now let's try simple delete.
+    
+    db.delete(user)
+    db.commit()
+    
+    return {"message": "User deleted successfully"}

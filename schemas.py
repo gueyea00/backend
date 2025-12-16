@@ -26,6 +26,12 @@ class UserResponse(UserBase):
     class Config:
         from_attributes = True
 
+class UserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    role: Optional[UserRole] = None
+    is_active: Optional[bool] = None
+
 # Team Schemas
 class TeamBase(BaseModel):
     name: str
